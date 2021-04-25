@@ -21,6 +21,17 @@ except:
 	print ('')
 
 import time
+from Robot import Robot
+
+
+
+
+ROBOT = 'Robotnik_Summit_XL'
+WHEEL_BL = 'joint_back_left_wheel'
+WHEEL_BR = 'joint_back_right_wheel'
+WHEEL_FL = 'joint_front_left_wheel'
+WHEEL_FR = 'joint_front_right_wheel'
+
 
 
 
@@ -34,61 +45,14 @@ if clientID!=-1:
 	sim.simxAddStatusbarMessage(clientID,'Funcionando...',sim.simx_opmode_oneshot_wait)
 	time.sleep(0.02)
 
-	#Handles
-	#Robo
-	erro, robo = sim.simxGetObjectHandle(clientID, 'Robotnik_Summit_XL', sim.simx_opmode_blocking)
-	#Motores
-	[erro, robotBackLeftMotor] = sim.simxGetObjectHandle(clientID, 'joint_back_left_wheel', sim.simx_opmode_blocking)
-	[erro, robotBackRightMotor] = sim.simxGetObjectHandle(clientID, 'joint_back_right_wheel', sim.simx_opmode_blocking)
-	[erro, robotFrontLeftMotor] = sim.simxGetObjectHandle(clientID, 'joint_front_left_wheel', sim.simx_opmode_blocking)
-	[erro, robotFrontRightMotor] = sim.simxGetObjectHandle(clientID, 'joint_front_right_wheel', sim.simx_opmode_blocking)
-
-	sim.simxPauseCommunication(clientID, True)
-	sim.simxSetJointTargetVelocity(clientID,robotBackLeftMotor, -5, sim.simx_opmode_oneshot)
-	sim.simxSetJointTargetVelocity(clientID,robotBackRightMotor, 5, sim.simx_opmode_oneshot)
-	sim.simxSetJointTargetVelocity(clientID,robotFrontLeftMotor, -5, sim.simx_opmode_oneshot)
-	sim.simxSetJointTargetVelocity(clientID,robotFrontRightMotor, 5, sim.simx_opmode_oneshot)
-	sim.simxPauseCommunication(clientID, False)
-
-	time.sleep(1)
 	
-	sim.simxPauseCommunication(clientID, True)
-	sim.simxSetJointTargetVelocity(clientID,robotBackLeftMotor, 5, sim.simx_opmode_oneshot)
-	sim.simxSetJointTargetVelocity(clientID,robotBackRightMotor, -5, sim.simx_opmode_oneshot)
-	sim.simxSetJointTargetVelocity(clientID,robotFrontLeftMotor, 5, sim.simx_opmode_oneshot)
-	sim.simxSetJointTargetVelocity(clientID,robotFrontRightMotor, -5, sim.simx_opmode_oneshot)
-	sim.simxPauseCommunication(clientID, False)
 
-	time.sleep(1)
+	robot = Robot(clientID, ROBOT, WHEEL_BL, WHEEL_BR, WHEEL_FL, WHEEL_FR)
+
+	robot.MoveLeft(30, 0.6)
 
 
-	sim.simxPauseCommunication(clientID, True)
-	sim.simxSetJointTargetVelocity(clientID,robotBackLeftMotor, -5, sim.simx_opmode_oneshot)
-	sim.simxSetJointTargetVelocity(clientID,robotBackRightMotor, 5, sim.simx_opmode_oneshot)
-	sim.simxSetJointTargetVelocity(clientID,robotFrontLeftMotor, -5, sim.simx_opmode_oneshot)
-	sim.simxSetJointTargetVelocity(clientID,robotFrontRightMotor, 5, sim.simx_opmode_oneshot)
-	sim.simxPauseCommunication(clientID, False)
-
-	time.sleep(1)
-
-	sim.simxPauseCommunication(clientID, True)
-	sim.simxSetJointTargetVelocity(clientID,robotBackLeftMotor, 5, sim.simx_opmode_oneshot)
-	sim.simxSetJointTargetVelocity(clientID,robotBackRightMotor, -5, sim.simx_opmode_oneshot)
-	sim.simxSetJointTargetVelocity(clientID,robotFrontLeftMotor, 5, sim.simx_opmode_oneshot)
-	sim.simxSetJointTargetVelocity(clientID,robotFrontRightMotor, -5, sim.simx_opmode_oneshot)
-	sim.simxPauseCommunication(clientID, False)
-
-	time.sleep(1)
-
-
-	sim.simxPauseCommunication(clientID, True)
-	sim.simxSetJointTargetVelocity(clientID,robotBackLeftMotor, -5, sim.simx_opmode_oneshot)
-	sim.simxSetJointTargetVelocity(clientID,robotBackRightMotor, 5, sim.simx_opmode_oneshot)
-	sim.simxSetJointTargetVelocity(clientID,robotFrontLeftMotor, -5, sim.simx_opmode_oneshot)
-	sim.simxSetJointTargetVelocity(clientID,robotFrontRightMotor, 5, sim.simx_opmode_oneshot)
-	sim.simxPauseCommunication(clientID, False)
-
-	time.sleep(1)
+	time.sleep(10)
 
      # Pause simulation
 	sim.simxPauseSimulation(clientID,sim.simx_opmode_oneshot_wait)
