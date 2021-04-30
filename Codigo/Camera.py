@@ -32,3 +32,8 @@ class Camera:
         cv2.imshow(winName,img)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
+
+    #AreaSize retorna a area (ou um valor relacionado) do quadrado visto na imagem    
+    def AreaSize(self):
+        return (time.time()%4)
+

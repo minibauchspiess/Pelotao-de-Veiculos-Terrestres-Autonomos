@@ -25,15 +25,100 @@ from Robot import Robot
 import numpy as np
 import cv2
 import asyncio
+import msvcrt
 
 
 
-ROBOT = 'Seguidor'
-WHEEL_BL = 'bl_wheel'
-WHEEL_BR = 'br_wheel'
-WHEEL_FL = 'fl_wheel'
-WHEEL_FR = 'fr_wheel'
-CAMERA = 'cam'
+SEGUIDOR = 'Seguidor'
+SEG_WHEEL_BL = 'seg_bl_wheel'
+SEG_WHEEL_BR = 'seg_br_wheel'
+SEG_WHEEL_FL = 'seg_fl_wheel'
+SEG_WHEEL_FR = 'seg_fr_wheel'
+SEG_CAMERA = 'cam'
+
+LIDER = 'Lider'
+LID_WHEEL_BL = 'lid_bl_wheel'
+LID_WHEEL_BR = 'lid_br_wheel'
+LID_WHEEL_FL = 'lid_fl_wheel'
+LID_WHEEL_FR = 'lid_fr_wheel'
+
+LIMIAR_AREA = 2
+
+
+continuar = True
+cont_lock = asyncio.Lock()
+
+area_atual = 3
+area_lock = asyncio.Lock()
+
+
+#Tasks usadas no programa
+async def ControleDePrograma():
+	global continuar
+
+	print("Pressione enter para finalizar o programa")
+
+	done = False
+	while(not done):
+		if msvcrt.kbhit():
+			done = True
+		await asyncio.sleep(0.2)
+	
+
+	async with cont_lock:
+		continuar = False
+
+async def LiderMove(lider):
+	global continuar
+	async with cont_lock:
+		cond = continuar
+	while (cond):
+		lider.MoveFwd(10)
+		await asyncio.sleep(2)
+		lider.MoveRev(10)
+		await asyncio.sleep(2)
+
+		async with cont_lock:
+			cond = continuar
+
+async def UpdateArea(seguidor):
+	global continuar
+	global area_atual
+
+	async with cont_lock:
+		cond = continuar
+	while(cond):
+		async with area_lock:
+			area_atual = seguidor.camera.AreaSize()
+			print(area_atual)
+		await asyncio.sleep(0.5)
+		async with cont_lock:
+			cond = continuar
+
+
+async def SeguidorMove(seguidor):
+	global continuar
+	global area_atual
+
+	async with cont_lock:
+		cond = continuar
+
+	while(cond):
+		async with area_lock:
+			area = area_atual
+		
+		if(area<LIMIAR_AREA):
+			seguidor.MoveFwd(10)
+		else:
+			seguidor.MoveRev(10)
+		
+		await asyncio.sleep(0.5)
+
+		async with cont_lock:
+			cond = continuar
+
+async def ExecThreads(lider, seguidor):
+	await asyncio.gather(ControleDePrograma(), LiderMove(lider), UpdateArea(seguidor), SeguidorMove(seguidor))
 
 
 
@@ -48,16 +133,14 @@ if clientID!=-1:
 	time.sleep(0.02)
 
 
-	robot = Robot(clientID, ROBOT, WHEEL_BL, WHEEL_BR, WHEEL_FL, WHEEL_FR, CAMERA)
-
-	robot.camera.ShowInWindow(robot.camera.GetImage())
-
-	robot.MoveLeft(30, 0.6)
+	seguidor = Robot(clientID, SEGUIDOR, SEG_WHEEL_BL, SEG_WHEEL_BR, SEG_WHEEL_FL, SEG_WHEEL_FR, SEG_CAMERA)
+	lider = Robot(clientID, LIDER, LID_WHEEL_BL, LID_WHEEL_BR, LID_WHEEL_FL, LID_WHEEL_FR)
 
 
-	time.sleep(3)
+	asyncio.run(ExecThreads(lider, seguidor))
 
-     # Pause simulation
+
+    # Pause simulation
 	sim.simxPauseSimulation(clientID,sim.simx_opmode_oneshot_wait)
 
     # Now close the connection to V-REP:
