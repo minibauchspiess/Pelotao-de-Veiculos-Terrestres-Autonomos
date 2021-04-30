@@ -1,5 +1,6 @@
 import sim
 from Camera import Camera
+import asyncio
 
 class Robot:
     def __init__(self, clientID, robot_name, wheel_bl_name, wheel_br_name, wheel_fl_name, wheel_fr_name, cam_name):

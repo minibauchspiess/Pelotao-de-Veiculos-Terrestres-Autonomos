@@ -2,6 +2,7 @@ import sim
 import time
 import numpy as np
 import cv2
+import asyncio
 
 class Camera:
     def __init__(self, clientID, cam_name):
