@@ -42,13 +42,13 @@ LID_WHEEL_BR = 'lid_br_wheel'
 LID_WHEEL_FL = 'lid_fl_wheel'
 LID_WHEEL_FR = 'lid_fr_wheel'
 
-LIMIAR_AREA = 2
+LIMIAR_AREA = 16641.0
 
 
 continuar = True
 cont_lock = asyncio.Lock()
 
-area_atual = 3
+area_atual = 16641.0
 area_lock = asyncio.Lock()
 
 

@@ -35,5 +35,21 @@ class Camera:
 
     #AreaSize retorna a area (ou um valor relacionado) do quadrado visto na imagem    
     def AreaSize(self):
-        return (time.time()%4)
+
+        img = getImage(camera)
+        
+        lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+        lowerRed = numpy.array([120, 200, 190])
+        upRed = numpy.array([150, 220, 210])
+
+        mask = cv2.inRange(lab, lowerRed, upRed)
+        lx, contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+        cnt = contours[0]
+        m = cv2.moments(cnt)
+        cx = int(m['m10']/m['m00'])
+        cy = int(m['m01']/m['m00'])
+        area= cv2.contourArea(cnt)
+        
+        return area
 
