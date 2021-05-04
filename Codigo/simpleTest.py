@@ -73,9 +73,9 @@ async def LiderMove(lider):
 	async with cont_lock:
 		cond = continuar
 	while (cond):
-		lider.MoveFwd(10)
+		lider.MoveFwd(5)
 		await asyncio.sleep(2)
-		lider.MoveRev(10)
+		lider.MoveRev(5)
 		await asyncio.sleep(2)
 
 		async with cont_lock:
@@ -108,9 +108,9 @@ async def SeguidorMove(seguidor):
 			area = area_atual
 		
 		if(area<LIMIAR_AREA):
-			seguidor.MoveFwd(10)
+			seguidor.MoveFwd(5)
 		else:
-			seguidor.MoveRev(10)
+			seguidor.MoveRev(5)
 		
 		await asyncio.sleep(0.5)
 
