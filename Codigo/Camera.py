@@ -13,7 +13,9 @@ class Camera:
         # Start the Stream
         erro, res, image = sim.simxGetVisionSensorImage(clientID, self.camera_hand, 0, sim.simx_opmode_streaming)
 
-    def GetImage(self):
+    def GetImage(self, fps):
+        periodo = 1/fps
+        start_time = time.time()
         errol = 1
 
         while(errol != sim.simx_return_ok):
@@ -26,6 +28,9 @@ class Camera:
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)	# Transforma o RGB recebido em BGR pro CV2
         img = img[0:res[0]-(int(res[0]/3)), 0:res[1]]
 
+        while (time.time()-start_time<periodo):
+            pass
+
         return img
 
     def ShowInWindow(self, img, winName='image'):
@@ -37,7 +42,7 @@ class Camera:
     #AreaSize retorna a area (ou um valor relacionado) do quadrado visto na imagem    
     def AreaSize(self):
 
-        img = self.GetImage()
+        img = self.GetImage(30)
         
         lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
         lowerRed = numpy.array([120, 200, 190])

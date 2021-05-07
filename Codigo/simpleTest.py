@@ -44,6 +44,8 @@ LID_WHEEL_FR = 'lid_fr_wheel'
 
 LIMIAR_AREA = 16641.0
 
+comando = 's'
+comando_lock = asyncio.Lock()
 
 continuar = True
 cont_lock = asyncio.Lock()
@@ -55,13 +57,22 @@ area_lock = asyncio.Lock()
 #Tasks usadas no programa
 async def ControleDePrograma():
 	global continuar
+	global comando
 
 	print("Pressione enter para finalizar o programa")
 
 	done = False
 	while(not done):
+		print("Comando")
 		if msvcrt.kbhit():
-			done = True
+			async with comando_lock:
+				print("LOCK 1")
+				comando = msvcrt.getch()
+				print("lock 2")
+			print("Comando 1")
+			if ord(comando) == 113:
+				done = True
+			print("Comando 2")
 		await asyncio.sleep(0.2)
 	
 
@@ -73,11 +84,17 @@ async def LiderMove(lider):
 	async with cont_lock:
 		cond = continuar
 	while (cond):
-		lider.MoveFwd(5)
-		await asyncio.sleep(2)
-		lider.MoveRev(5)
-		await asyncio.sleep(2)
+		print("Lider MOVE")
+		await asyncio.sleep(0.1)
+		async with comando_lock:
+			com = comando
 
+		if ord(com) == 119:
+			lider.MoveFwd(5)
+			await asyncio.sleep(0.1)
+		if ord(com) == 115:
+			lider.MoveRev(0)
+			await asyncio.sleep(0.5)
 		async with cont_lock:
 			cond = continuar
 
@@ -88,10 +105,11 @@ async def UpdateArea(seguidor):
 	async with cont_lock:
 		cond = continuar
 	while(cond):
+		print("Update Area")
 		async with area_lock:
 			area_atual = seguidor.camera.AreaSize()
-			print(area_atual)
-		await asyncio.sleep(0.5)
+			#print(area_atual)
+		await asyncio.sleep(0.03)
 		async with cont_lock:
 			cond = continuar
 
@@ -104,13 +122,18 @@ async def SeguidorMove(seguidor):
 		cond = continuar
 
 	while(cond):
+		print("Seguidor MOVE")
 		async with area_lock:
 			area = area_atual
 		
-		if(area<LIMIAR_AREA):
-			seguidor.MoveFwd(5)
-		else:
-			seguidor.MoveRev(5)
+		seguidor.MoveFwd((LIMIAR_AREA-area)*0.001)
+		print(LIMIAR_AREA-area)
+		#if(area<LIMIAR_AREA):
+		#	seguidor.MoveFwd(5+(LIMIAR_AREA - area)*0.0005)
+		#	print("F: ", 5+(LIMIAR_AREA - area)*0.0005)
+		#else:
+		#	seguidor.MoveRev(5+(area - LIMIAR_AREA)*0.0005)
+		#	print("B: ", 5+(area - LIMIAR_AREA)*0.0005)
 		
 		await asyncio.sleep(0.5)
 
@@ -119,6 +142,9 @@ async def SeguidorMove(seguidor):
 
 async def ExecThreads(lider, seguidor):
 	await asyncio.gather(ControleDePrograma(), LiderMove(lider), UpdateArea(seguidor), SeguidorMove(seguidor))
+	
+	while(True):
+		await asyncio.sleep(1)
 
 
 
