@@ -63,16 +63,11 @@ async def ControleDePrograma():
 
 	done = False
 	while(not done):
-		print("Comando")
 		if msvcrt.kbhit():
 			async with comando_lock:
-				print("LOCK 1")
 				comando = msvcrt.getch()
-				print("lock 2")
-			print("Comando 1")
-			if ord(comando) == 113:
+			if ord(comando) == 113: #------------------ q (tecla para sair)
 				done = True
-			print("Comando 2")
 		await asyncio.sleep(0.2)
 	
 
@@ -84,15 +79,17 @@ async def LiderMove(lider):
 	async with cont_lock:
 		cond = continuar
 	while (cond):
-		print("Lider MOVE")
 		await asyncio.sleep(0.1)
 		async with comando_lock:
 			com = comando
 
-		if ord(com) == 119:
+		if ord(com) == 119: #--------------------------- w (mover para frente)
 			lider.MoveFwd(5)
 			await asyncio.sleep(0.1)
-		if ord(com) == 115:
+		if ord(com) == 114: #--------------------------- r (mover para trás)
+			lider.MoveRev(5)
+			await asyncio.sleep(0.1)
+		if ord(com) == 115: #--------------------------- s (comando para parar)
 			lider.MoveRev(0)
 			await asyncio.sleep(0.5)
 		async with cont_lock:
@@ -105,7 +102,6 @@ async def UpdateArea(seguidor):
 	async with cont_lock:
 		cond = continuar
 	while(cond):
-		print("Update Area")
 		async with area_lock:
 			area_atual = seguidor.camera.AreaSize()
 			#print(area_atual)
@@ -122,11 +118,10 @@ async def SeguidorMove(seguidor):
 		cond = continuar
 
 	while(cond):
-		print("Seguidor MOVE")
 		async with area_lock:
 			area = area_atual
 		
-		seguidor.MoveFwd((LIMIAR_AREA-area)*0.001)
+		seguidor.MoveFwd((LIMIAR_AREA-area)*0.0001)
 		print(LIMIAR_AREA-area)
 		#if(area<LIMIAR_AREA):
 		#	seguidor.MoveFwd(5+(LIMIAR_AREA - area)*0.0005)
