@@ -20,12 +20,14 @@ except:
 	print ('--------------------------------------------------------------')
 	print ('')
 
+from sim import simxGetInMessageInfo, simxSetVisionSensorImage
 import time
 from Robot import Robot
 import numpy as np
 import cv2
 import asyncio
 import msvcrt
+import numpy
 
 
 
@@ -42,7 +44,7 @@ LID_WHEEL_BR = 'lid_br_wheel'
 LID_WHEEL_FL = 'lid_fl_wheel'
 LID_WHEEL_FR = 'lid_fr_wheel'
 
-LIMIAR_AREA = 16641.0
+LIMIAR_DISTANCIA = 1.718624057122607
 
 comando = 's'
 comando_lock = asyncio.Lock()
@@ -50,8 +52,8 @@ comando_lock = asyncio.Lock()
 continuar = True
 cont_lock = asyncio.Lock()
 
-area_atual = 16641.0
-area_lock = asyncio.Lock()
+distancia_atual = 1.718624057122607
+distancia_lock = asyncio.Lock()
 
 
 #Tasks usadas no programa
@@ -97,14 +99,14 @@ async def LiderMove(lider):
 
 async def UpdateArea(seguidor):
 	global continuar
-	global area_atual
+	global distancia_atual
 
 	async with cont_lock:
 		cond = continuar
 	while(cond):
-		async with area_lock:
-			area_atual = seguidor.camera.AreaSize()
-			#print(area_atual)
+		async with distancia_lock:
+			distancia_atual = seguidor.camera.Distance()
+			
 		await asyncio.sleep(0.03)
 		async with cont_lock:
 			cond = continuar
@@ -112,23 +114,17 @@ async def UpdateArea(seguidor):
 
 async def SeguidorMove(seguidor):
 	global continuar
-	global area_atual
+	global distancia_atual
 
 	async with cont_lock:
 		cond = continuar
 
 	while(cond):
-		async with area_lock:
-			area = area_atual
+		async with distancia_lock:
+			distancia = distancia_atual
 		
-		seguidor.MoveFwd((LIMIAR_AREA-area)*0.0001)
-		print(LIMIAR_AREA-area)
-		#if(area<LIMIAR_AREA):
-		#	seguidor.MoveFwd(5+(LIMIAR_AREA - area)*0.0005)
-		#	print("F: ", 5+(LIMIAR_AREA - area)*0.0005)
-		#else:
-		#	seguidor.MoveRev(5+(area - LIMIAR_AREA)*0.0005)
-		#	print("B: ", 5+(area - LIMIAR_AREA)*0.0005)
+		seguidor.MoveFwd(5 * (distancia - LIMIAR_DISTANCIA))
+		print("dif distancia: ", round(distancia, 4))
 		
 		await asyncio.sleep(0.5)
 

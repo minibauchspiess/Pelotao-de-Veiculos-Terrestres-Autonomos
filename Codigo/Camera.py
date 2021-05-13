@@ -4,6 +4,7 @@ import numpy as np
 import numpy
 import cv2
 import asyncio
+import math
 
 class Camera:
     def __init__(self, clientID, cam_name):
@@ -40,7 +41,7 @@ class Camera:
         cv2.destroyAllWindows()
 
     #AreaSize retorna a area (ou um valor relacionado) do quadrado visto na imagem    
-    def AreaSize(self):
+    def Distance(self):
 
         img = self.GetImage(30)
         
@@ -50,12 +51,52 @@ class Camera:
 
         mask = cv2.inRange(lab, lowerRed, upRed)
         contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        epsilon = 0.1 * cv2.arcLength(contours[0], True)
+        contours1 = cv2.approxPolyDP(contours[0], epsilon, True)
+        #contours1[ponto][0][x ou y]
+        #cnt = contours1
 
-        cnt = contours[0]
-        m = cv2.moments(cnt)
-        cx = int(m['m10']/m['m00'])
-        cy = int(m['m01']/m['m00'])
-        area= cv2.contourArea(cnt)
+        #P = contours[0][1][0][1] - contours[0][0][0][1]
+        auxx = []
+        auxy = []
+        for i in range(len(contours1)):
+            auxx.append(contours1[i][0][0])
+            auxy.append(contours1[i][0][1])
+        mx = (max(auxx)+min(auxx))/2
+        my = (max(auxy)+min(auxy))/2
+
+        for i in range(len(contours1)):
+            ponto = contours1[i][0]
+            if(ponto[0]>mx):
+                if(ponto[1]>my):
+                    ptid = ponto
+                else:
+                    ptsd = ponto
+            else:
+                if(ponto[1]>my):
+                    ptie = ponto
+                else:
+                    ptse = ponto
+        #ptid = ponto inferior direito
+        #ptsd = ponto superior direito
+        #ptie = ponto superior esquerdo
+        #ptse = ponto superior esquerdo
         
-        return area
+        #ptse       ptsd
+        #
+        #
+        #ptie       ptid
+        #ponto inferior tem MAIOR y (pq opencv??)
+        
+        P = ((ptid[1]  - ptsd[1]) + (ptie[1] - ptse[1])) / 2 # ----------------- ALTURA EM PIXELS
+        #P1 = contours1[1][0][1] - contours1[0][0][1]
+        F = (img.shape[1] / 2) * (1 / math.tan((1/6) * math.pi)) #----------------------- DISTANCIA FOCAL
+        D = (F * 0.5) / P # ---------------------------------------------------- DISTANCIA
+
+        #m = cv2.moments(cnt)
+        #cx = int(m['m10']/m['m00'])
+        #cy = int(m['m01']/m['m00'])
+        #area= cv2.contourArea(cnt) (NAO EH MAIS USADO)
+        
+        return D
 
