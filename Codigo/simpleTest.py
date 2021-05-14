@@ -28,9 +28,10 @@ import cv2
 import asyncio
 import msvcrt
 import numpy
+from statistics import mean
 
 
-
+#Informacoes dos veiculos
 SEGUIDOR = 'Seguidor'
 SEG_WHEEL_BL = 'seg_bl_wheel'
 SEG_WHEEL_BR = 'seg_br_wheel'
@@ -44,98 +45,105 @@ LID_WHEEL_BR = 'lid_br_wheel'
 LID_WHEEL_FL = 'lid_fl_wheel'
 LID_WHEEL_FR = 'lid_fr_wheel'
 
+#Valores fixos
 LIMIAR_DISTANCIA = 1.718624057122607
 
+#Variaveis globais
 comando = 's'
-comando_lock = asyncio.Lock()
-
 continuar = True
-cont_lock = asyncio.Lock()
-
 distancia_atual = 1.718624057122607
-distancia_lock = asyncio.Lock()
+
+#Controles de tempo
+ctrlStartTime = time.time()
+liderStartTime = time.time()
+updtAreaStartTime = time.time()
+seguidorStartTime = time.time()
+
+ctrlRespTime = []
+liderRespTime = []
+updtAreaRespTime = []
+seguidorRespTime = []
 
 
 #Tasks usadas no programa
 async def ControleDePrograma():
 	global continuar
 	global comando
-
-	print("Pressione enter para finalizar o programa")
-
-	done = False
-	while(not done):
-		if msvcrt.kbhit():
-			async with comando_lock:
-				comando = msvcrt.getch()
-			if ord(comando) == 113: #------------------ q (tecla para sair)
-				done = True
-		await asyncio.sleep(0.2)
-	
-
-	async with cont_lock:
+	if msvcrt.kbhit():
+		comando = msvcrt.getch()
+	await asyncio.sleep(0.000001)
+	if ord(comando) == 113: #------------------ q (tecla para sair)
 		continuar = False
+	ctrlRespTime.append(time.time()-ctrlStartTime)
+
+async def CallControleDePrograma(task, period, start):
+    global ctrlStartTime
+    if((time.time()-ctrlStartTime)>period)and(task.done()):
+        ctrlStartTime = start
+        task = asyncio.create_task(ControleDePrograma())
+    else:
+        await asyncio.sleep(0.000001)
 
 async def LiderMove(lider):
-	global continuar
-	async with cont_lock:
-		cond = continuar
-	while (cond):
-		await asyncio.sleep(0.1)
-		async with comando_lock:
-			com = comando
+	global comando
+	if ord(comando) == 119: #--------------------------- w (mover para frente)
+		lider.MoveFwd(5)
+	await asyncio.sleep(0.000001)
+	if ord(comando) == 114: #--------------------------- r (mover para trás)
+		lider.MoveRev(5)
+	await asyncio.sleep(0.000001)
+	if ord(comando) == 115: #--------------------------- s (comando para parar)
+		lider.MoveRev(0)
+	liderRespTime.append(time.time()-liderStartTime)
 
-		if ord(com) == 119: #--------------------------- w (mover para frente)
-			lider.MoveFwd(5)
-			await asyncio.sleep(0.1)
-		if ord(com) == 114: #--------------------------- r (mover para trás)
-			lider.MoveRev(5)
-			await asyncio.sleep(0.1)
-		if ord(com) == 115: #--------------------------- s (comando para parar)
-			lider.MoveRev(0)
-			await asyncio.sleep(0.5)
-		async with cont_lock:
-			cond = continuar
+async def CallLiderMove(task, period, start, lider):
+    global liderStartTime
+    if((time.time()-liderStartTime)>period)and(task.done()):
+        liderStartTime = start
+        task = asyncio.create_task(LiderMove(lider))
+    else:
+        await asyncio.sleep(0.000001)
 
 async def UpdateArea(seguidor):
-	global continuar
 	global distancia_atual
+	distancia_atual = seguidor.camera.Distance()
+	updtAreaRespTime.append(time.time()-updtAreaStartTime)
 
-	async with cont_lock:
-		cond = continuar
-	while(cond):
-		async with distancia_lock:
-			distancia_atual = seguidor.camera.Distance()
-			
-		await asyncio.sleep(0.03)
-		async with cont_lock:
-			cond = continuar
-
+async def CallUpdateArea(task, period, start, seguidor):
+    global updtAreaStartTime
+    if((time.time()-updtAreaStartTime)>period)and(task.done()):
+        updtAreaStartTime = start
+        task = asyncio.create_task(UpdateArea(seguidor))
+    else:
+        await asyncio.sleep(0.000001)
 
 async def SeguidorMove(seguidor):
-	global continuar
 	global distancia_atual
+	seguidor.MoveFwd(5 * (distancia_atual - LIMIAR_DISTANCIA))
+	seguidorRespTime.append(time.time()-seguidorStartTime)
 
-	async with cont_lock:
-		cond = continuar
+async def CallSeguidorMove(task, period, start, seguidor):
+    global seguidorStartTime
+    if((time.time()-seguidorStartTime)>period)and(task.done()):
+        seguidorStartTime = start
+        task = asyncio.create_task(SeguidorMove(seguidor))
+    else:
+        await asyncio.sleep(0.000001)
 
-	while(cond):
-		async with distancia_lock:
-			distancia = distancia_atual
-		
-		seguidor.MoveFwd(5 * (distancia - LIMIAR_DISTANCIA))
-		print("dif distancia: ", round(distancia, 4))
-		
-		await asyncio.sleep(0.5)
-
-		async with cont_lock:
-			cond = continuar
 
 async def ExecThreads(lider, seguidor):
-	await asyncio.gather(ControleDePrograma(), LiderMove(lider), UpdateArea(seguidor), SeguidorMove(seguidor))
-	
-	while(True):
-		await asyncio.sleep(1)
+	taskCtrl = asyncio.create_task(ControleDePrograma())
+	taskLider = asyncio.create_task(LiderMove(lider))
+	taskUpdtArea = asyncio.create_task(UpdateArea(seguidor))
+	taskSeguidor = asyncio.create_task(SeguidorMove(seguidor))
+
+	while continuar:
+		await CallControleDePrograma(taskCtrl, 0.1, time.time())
+		await CallLiderMove(taskLider, 0.1, time.time(), lider)
+		await CallUpdateArea(taskUpdtArea, 0.1, time.time(), seguidor)
+		await CallSeguidorMove(taskSeguidor, 0.1, time.time(), seguidor)
+		await asyncio.sleep(0.000001)
+
 
 
 
