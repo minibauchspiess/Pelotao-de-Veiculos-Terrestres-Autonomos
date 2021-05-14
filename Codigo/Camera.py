@@ -14,6 +14,46 @@ class Camera:
         # Start the Stream
         erro, res, image = sim.simxGetVisionSensorImage(clientID, self.camera_hand, 0, sim.simx_opmode_streaming)
 
+    def CaptureImage(self, fps):
+        periodo = 1/fps
+        start_time = time.time()
+        #await asyncio.sleep(0.000001)
+        startTime = time.time()
+        #await asyncio.sleep(0.000001)
+        errol = 1
+        while(errol != sim.simx_return_ok):
+            errol, res, image = sim.simxGetVisionSensorImage(self.clientID, self.camera_hand, 0, sim.simx_opmode_buffer)
+            #await asyncio.sleep(0.000001)
+        
+        while (time.time()-start_time<periodo):
+            #await asyncio.sleep(0.000001)
+            pass
+
+        return image, res
+
+    def ReadImage(self, img, res, tempoDeLeitura):
+        start_time = time.time()
+        #await asyncio.sleep(0.000001)
+        nres = [res[0]-int(res[0]/3),res[1]]
+        #await asyncio.sleep(0.000001)
+        img = np.array(img, dtype=np.uint8)		# Como é recebido uma string, precisa reformatar
+        #await asyncio.sleep(0.000001)
+        img = np.reshape(img, (res[0], res[1], 3))	# Pro CV2, (y, x, [B,R,G])
+        #await asyncio.sleep(0.000001)
+        img = np.flip(img, 0)						# Por algum motivo vem de ponta cabeça
+        #await asyncio.sleep(0.000001)
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)	# Transforma o RGB recebido em BGR pro CV2
+        #await asyncio.sleep(0.000001)
+        img = img[0:res[0]-(int(res[0]/3)), 0:res[1]]
+        #await asyncio.sleep(0.000001)
+
+        while (time.time()-start_time<tempoDeLeitura):
+            #await asyncio.sleep(0.000001)
+            pass
+
+        return img
+        
+
     def GetImage(self, fps):
         periodo = 1/fps
         start_time = time.time()
@@ -44,19 +84,19 @@ class Camera:
     def Distance(self):
 
         img = self.GetImage(30)
-        
         lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+        #await asyncio.sleep(0.000001)
         lowerRed = numpy.array([120, 200, 190])
         upRed = numpy.array([150, 220, 210])
 
         mask = cv2.inRange(lab, lowerRed, upRed)
+        #await asyncio.sleep(0.000001)
         contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        #await asyncio.sleep(0.000001)
         epsilon = 0.1 * cv2.arcLength(contours[0], True)
+        #await asyncio.sleep(0.000001)
         contours1 = cv2.approxPolyDP(contours[0], epsilon, True)
-        #contours1[ponto][0][x ou y]
-        #cnt = contours1
-
-        #P = contours[0][1][0][1] - contours[0][0][0][1]
+        #await asyncio.sleep(0.000001)
         auxx = []
         auxy = []
         for i in range(len(contours1)):
@@ -64,6 +104,7 @@ class Camera:
             auxy.append(contours1[i][0][1])
         mx = (max(auxx)+min(auxx))/2
         my = (max(auxy)+min(auxy))/2
+        #await asyncio.sleep(0.000001)
 
         for i in range(len(contours1)):
             ponto = contours1[i][0]
@@ -77,6 +118,7 @@ class Camera:
                     ptie = ponto
                 else:
                     ptse = ponto
+        #await asyncio.sleep(0.000001)
         #ptid = ponto inferior direito
         #ptsd = ponto superior direito
         #ptie = ponto superior esquerdo
@@ -93,10 +135,6 @@ class Camera:
         F = (img.shape[1] / 2) * (1 / math.tan((1/6) * math.pi)) #----------------------- DISTANCIA FOCAL
         D = (F * 0.5) / P # ---------------------------------------------------- DISTANCIA
 
-        #m = cv2.moments(cnt)
-        #cx = int(m['m10']/m['m00'])
-        #cy = int(m['m01']/m['m00'])
-        #area= cv2.contourArea(cnt) (NAO EH MAIS USADO)
         
         return D
 
