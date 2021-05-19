@@ -90,13 +90,9 @@ class Camera:
         upRed = numpy.array([150, 220, 210])
 
         mask = cv2.inRange(lab, lowerRed, upRed)
-        #await asyncio.sleep(0.000001)
         contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        #await asyncio.sleep(0.000001)
         epsilon = 0.1 * cv2.arcLength(contours[0], True)
-        #await asyncio.sleep(0.000001)
         contours1 = cv2.approxPolyDP(contours[0], epsilon, True)
-        #await asyncio.sleep(0.000001)
         auxx = []
         auxy = []
         for i in range(len(contours1)):

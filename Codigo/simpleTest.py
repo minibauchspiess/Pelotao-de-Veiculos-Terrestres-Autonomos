@@ -49,7 +49,7 @@ LID_WHEEL_FR = 'lid_fr_wheel'
 #Valores fixos
 LIMIAR_DISTANCIA = 1.718624057122607
 P = 10	#Proporcional do controle de velocidade do seguidor
-PERIODO_CONTROL = 0.8
+PERIODO_CONTROL = 0.1
 PERIODO_LIDER = 0.7
 PERIODO_CAP_IMAGE = 0.6
 PERIODO_READ_IMAGE = 0.6
@@ -136,6 +136,116 @@ async def CallLiderMove(task, period, start, startSim, lider):
 		await asyncio.sleep(0.000001)
 
 
+async def GetDistance(seguidor):
+	global cvImg
+	global distancia_atual
+	#print("Entrei no get distance")
+	if (round(1000*time.time())%1000<200):
+		distancia_atual = seguidor.camera.Distance()
+	getDistRespTime.append(time.time()-getDistStartTime)
+
+async def CallGetDistance(task, period, start, startSim, seguidor):
+	global getDistStartTime
+	global getDistSimStartTime
+	if((startSim-getDistSimStartTime)>period)and(task.done()):
+		getDistStartTime = start
+		getDistSimStartTime = startSim
+		task = asyncio.create_task(GetDistance(seguidor))
+	else:
+		await asyncio.sleep(0.000001)
+
+
+async def SeguidorMove(seguidor):
+	global distancia_atual
+	#print("Entrei no seguidor")
+	seguidor.MoveFwd(P * (distancia_atual - LIMIAR_DISTANCIA))
+	seguidorRespTime.append(time.time()-seguidorStartTime)
+
+async def CallSeguidorMove(task, period, start, startSim, seguidor):
+	global seguidorStartTime
+	global seguidorSimStartTime
+	#simTimeNow = time.time()	#Mudar esse time.time() pra forma de pegar o tempo da simulacao
+	if((startSim-seguidorSimStartTime)>period)and(task.done()):
+		seguidorStartTime = start
+		seguidorSimStartTime = startSim
+		task = asyncio.create_task(SeguidorMove(seguidor))
+	else:
+		await asyncio.sleep(0.000001)
+
+
+async def ExecThreads(lider, seguidor):
+	global PERIODO_CONTROL
+	global PERIODO_LIDER
+	global PERIODO_GET_DIST
+	global PERIODO_SEGUIDOR
+	taskCtrl = asyncio.create_task(ControleDePrograma())
+	taskLider = asyncio.create_task(LiderMove(lider))
+	taskGetDist = asyncio.create_task(GetDistance(seguidor))
+	taskSeguidor = asyncio.create_task(SeguidorMove(seguidor))
+	await asyncio.sleep(0.000001)
+
+	while continuar:
+		sim.simxAddStatusbarMessage(clientID,'pegando T',sim.simx_opmode_oneshot_wait)
+		simTime = sim.simxGetLastCmdTime(clientID)/100
+		await CallControleDePrograma(taskCtrl, PERIODO_CONTROL, time.time(), simTime)
+
+		sim.simxAddStatusbarMessage(clientID,'pegando T',sim.simx_opmode_oneshot_wait)
+		simTime = sim.simxGetLastCmdTime(clientID)/100
+		await CallLiderMove(taskLider, PERIODO_LIDER, time.time(), simTime, lider)
+
+		sim.simxAddStatusbarMessage(clientID,'pegando T',sim.simx_opmode_oneshot_wait)
+		simTime = sim.simxGetLastCmdTime(clientID)/100
+		await CallGetDistance(taskGetDist, PERIODO_GET_DIST, time.time(), simTime, seguidor)
+
+		sim.simxAddStatusbarMessage(clientID,'pegando T',sim.simx_opmode_oneshot_wait)
+		simTime = sim.simxGetLastCmdTime(clientID)/100
+		await CallSeguidorMove(taskSeguidor, PERIODO_SEGUIDOR, time.time(), simTime, seguidor)
+
+		await asyncio.sleep(0.000001)
+
+
+
+
+print ('Program started')
+sim.simxFinish(-1) # just in case, close all opened connections
+clientID=sim.simxStart('127.0.0.1',19999,True,True,5000,5) # Connect to CoppeliaSim
+if clientID!=-1:
+
+	sim.simxStartSimulation(clientID, sim.simx_opmode_oneshot_wait)
+	print ('Connected to remote API server')
+	sim.simxAddStatusbarMessage(clientID,'Funcionando...',sim.simx_opmode_oneshot_wait)
+	time.sleep(0.02)
+
+
+	seguidor = Robot(clientID, SEGUIDOR, SEG_WHEEL_BL, SEG_WHEEL_BR, SEG_WHEEL_FL, SEG_WHEEL_FR, SEG_CAMERA)
+	lider = Robot(clientID, LIDER, LID_WHEEL_BL, LID_WHEEL_BR, LID_WHEEL_FL, LID_WHEEL_FR)
+
+
+	asyncio.run(ExecThreads(lider, seguidor))
+	plt.hist(ctrlRespTime)
+
+
+    # Pause simulation
+	sim.simxPauseSimulation(clientID,sim.simx_opmode_oneshot_wait)
+
+    # Now close the connection to V-REP:
+	sim.simxAddStatusbarMessage(clientID, 'Programa pausado', sim.simx_opmode_blocking )
+	sim.simxFinish(clientID)
+else:
+	print ('Failed connecting to remote API server')
+print ('Program ended')
+
+
+
+
+
+
+
+
+
+
+
+'''
 async def CapturaImagem(seguidor):
 	global imagemPura
 	global res
@@ -170,133 +280,4 @@ async def CallReadImg(task, period, start, startSim, seguidor):
 		task = asyncio.create_task(ReadImg(seguidor))
 	else:
 		await asyncio.sleep(0.000001)
-
-
-async def GetDistance(seguidor):
-	global cvImg
-	global distancia_atual
-	#print("Entrei no get distance")
-
-	distancia_atual = seguidor.camera.Distance()
-	getDistRespTime.append(time.time()-getDistStartTime)
-
-async def CallGetDistance(task, period, start, startSim, seguidor):
-	global getDistStartTime
-	global getDistSimStartTime
-	if((startSim-getDistSimStartTime)>period)and(task.done()):
-		getDistStartTime = start
-		getDistSimStartTime = startSim
-		task = asyncio.create_task(GetDistance(seguidor))
-	else:
-		await asyncio.sleep(0.000001)
-
-
 '''
-async def UpdateArea(seguidor):
-	global distancia_atual
-	distancia_atual = seguidor.camera.Distance()
-	updtAreaRespTime.append(time.time()-updtAreaStartTime)
-
-async def CallUpdateArea(task, period, start, startSim, seguidor):
-	global updtAreaStartTime
-	global updtAreaSimStartTime
-	#simTimeNow = time.time()	#Mudar esse time.time() pra forma de pegar o tempo da simulacao
-	if((startSim-updtAreaSimStartTime)>period)and(task.done()):
-		updtAreaStartTime = start
-		updtAreaSimStartTime = startSim
-		task = asyncio.create_task(UpdateArea(seguidor))
-	else:
-		await asyncio.sleep(0.000001)
-'''
-
-async def SeguidorMove(seguidor):
-	global distancia_atual
-	#print("Entrei no seguidor")
-	seguidor.MoveFwd(P * (distancia_atual - LIMIAR_DISTANCIA))
-	seguidorRespTime.append(time.time()-seguidorStartTime)
-
-async def CallSeguidorMove(task, period, start, startSim, seguidor):
-	global seguidorStartTime
-	global seguidorSimStartTime
-	#simTimeNow = time.time()	#Mudar esse time.time() pra forma de pegar o tempo da simulacao
-	if((startSim-seguidorSimStartTime)>period)and(task.done()):
-		seguidorStartTime = start
-		seguidorSimStartTime = startSim
-		task = asyncio.create_task(SeguidorMove(seguidor))
-	else:
-		await asyncio.sleep(0.000001)
-
-
-async def ExecThreads(lider, seguidor):
-	taskCtrl = asyncio.create_task(ControleDePrograma())
-	taskLider = asyncio.create_task(LiderMove(lider))
-	#taskcaptImg = asyncio.create_task(CapturaImagem(seguidor))
-	#await asyncio.sleep(4)
-	#taskReadImg = asyncio.create_task(ReadImg(seguidor))
-	#await asyncio.sleep(4)
-	taskGetDist = asyncio.create_task(GetDistance(seguidor))
-	#await asyncio.sleep(4)
-	#taskUpdtArea = asyncio.create_task(UpdateArea(seguidor))
-	taskSeguidor = asyncio.create_task(SeguidorMove(seguidor))
-	await asyncio.sleep(0.000001)
-
-	while continuar:
-		sim.simxAddStatusbarMessage(clientID,'pegando T',sim.simx_opmode_oneshot_wait)
-		simTime = sim.simxGetLastCmdTime(clientID)/100
-		await CallControleDePrograma(taskCtrl, 0.1, time.time(), simTime)
-
-		sim.simxAddStatusbarMessage(clientID,'pegando T',sim.simx_opmode_oneshot_wait)
-		simTime = sim.simxGetLastCmdTime(clientID)/100
-		await CallLiderMove(taskLider, 0.1, time.time(), simTime, lider)
-
-		#sim.simxAddStatusbarMessage(clientID,'pegando T',sim.simx_opmode_oneshot_wait)
-		#simTime = sim.simxGetLastCmdTime(clientID)/100
-		#await CallCapturaImagem(taskcaptImg, PERIODO_CAP_IMAGE, time.time(), simTime, seguidor)
-
-		#sim.simxAddStatusbarMessage(clientID,'pegando T',sim.simx_opmode_oneshot_wait)
-		#simTime = sim.simxGetLastCmdTime(clientID)/100
-		#await CallReadImg(taskReadImg, PERIODO_READ_IMAGE, time.time(), simTime, seguidor)
-
-		sim.simxAddStatusbarMessage(clientID,'pegando T',sim.simx_opmode_oneshot_wait)
-		simTime = sim.simxGetLastCmdTime(clientID)/100
-		await CallGetDistance(taskGetDist, PERIODO_GET_DIST, time.time(), simTime, seguidor)
-
-		#await CallUpdateArea(taskUpdtArea, 0.1, time.time(), simTime, seguidor)
-		sim.simxAddStatusbarMessage(clientID,'pegando T',sim.simx_opmode_oneshot_wait)
-		simTime = sim.simxGetLastCmdTime(clientID)/100
-		await CallSeguidorMove(taskSeguidor, 0.1, time.time(), simTime, seguidor)
-
-		await asyncio.sleep(0.000001)
-
-
-
-
-print ('Program started')
-sim.simxFinish(-1) # just in case, close all opened connections
-clientID=sim.simxStart('127.0.0.1',19999,True,True,5000,5) # Connect to CoppeliaSim
-if clientID!=-1:
-
-	sim.simxStartSimulation(clientID, sim.simx_opmode_oneshot_wait)
-	print ('Connected to remote API server')
-	sim.simxAddStatusbarMessage(clientID,'Funcionando...',sim.simx_opmode_oneshot_wait)
-	time.sleep(0.02)
-
-
-	seguidor = Robot(clientID, SEGUIDOR, SEG_WHEEL_BL, SEG_WHEEL_BR, SEG_WHEEL_FL, SEG_WHEEL_FR, SEG_CAMERA)
-	lider = Robot(clientID, LIDER, LID_WHEEL_BL, LID_WHEEL_BR, LID_WHEEL_FL, LID_WHEEL_FR)
-
-
-	asyncio.run(ExecThreads(lider, seguidor))
-	plt.hist(ctrlRespTime)
-	print(ctrlRespTime)
-
-
-    # Pause simulation
-	sim.simxPauseSimulation(clientID,sim.simx_opmode_oneshot_wait)
-
-    # Now close the connection to V-REP:
-	sim.simxAddStatusbarMessage(clientID, 'Programa pausado', sim.simx_opmode_blocking )
-	sim.simxFinish(clientID)
-else:
-	print ('Failed connecting to remote API server')
-print ('Program ended')
